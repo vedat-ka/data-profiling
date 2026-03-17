@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ydata-profiling – Ergebnisse verstehen & Vorgehen</title>
+  <style>
+    :root {
+      --blue:   #1a73e8;
+      --green:  #1e8449;
+      --orange: #e67e22;
+      --red:    #c0392b;
+      --gray:   #555;
+      --light:  #f4f6f8;
+      --border: #dde1e7;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      color: #222;
+      line-height: 1.65;
+    }
+    header {
+      background: var(--blue);
+      color: #fff;
+      padding: 2rem 2rem 1.4rem;
+    }
+    header h1 { font-size: 1.7rem; margin-bottom: .3rem; }
+    header p  { opacity: .88; font-size: .95rem; }
+
+    nav {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: .6rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    nav a {
+      text-decoration: none;
+      color: var(--blue);
+      font-size: .88rem;
+      padding: .25rem .6rem;
+      border-radius: 4px;
+      border: 1px solid var(--blue);
+    }
+    nav a:hover { background: var(--blue); color: #fff; }
+
+    main { max-width: 960px; margin: 2rem auto; padding: 0 1rem 4rem; }
+
+    section {
+      background: #fff;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.6rem 1.8rem;
+      margin-bottom: 1.8rem;
+    }
+    h2 {
+      font-size: 1.22rem;
+      color: var(--blue);
+      border-bottom: 2px solid var(--blue);
+      padding-bottom: .4rem;
+      margin-bottom: 1.1rem;
+    }
+    h3 { font-size: 1rem; color: #333; margin: 1.1rem 0 .4rem; }
+
+    .badge {
+      display: inline-block;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: .15rem .55rem;
+      border-radius: 99px;
+      margin-right: .4rem;
+      vertical-align: middle;
+    }
+    .b-blue   { background: #d5e8fb; color: var(--blue); }
+    .b-green  { background: #d5f0e0; color: var(--green); }
+    .b-orange { background: #fdebd0; color: var(--orange); }
+    .b-red    { background: #fadbd8; color: var(--red); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+      margin-top: .6rem;
+    }
+    th {
+      background: var(--light);
+      text-align: left;
+      padding: .55rem .75rem;
+      border-bottom: 2px solid var(--border);
+      font-size: .82rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--gray);
+    }
+    td {
+      padding: .55rem .75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+
+    .step-list { counter-reset: steps; list-style: none; }
+    .step-list li {
+      counter-increment: steps;
+      position: relative;
+      padding: .7rem 1rem .7rem 3rem;
+      margin-bottom: .5rem;
+      background: var(--light);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--blue);
+    }
+    .step-list li::before {
+      content: counter(steps);
+      position: absolute;
+      left: .7rem;
+      top: .65rem;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      font-size: .8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .decision-box {
+      background: var(--light);
+      border-left: 4px solid var(--orange);
+      padding: .9rem 1.1rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin-top: .6rem;
+    }
+    .decision-box p { font-size: .9rem; }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem;
+      align-items: center;
+      margin-top: .8rem;
+    }
+    .flow-box {
+      background: var(--blue);
+      color: #fff;
+      padding: .5rem 1rem;
+      border-radius: var(--radius);
+      font-size: .88rem;
+      font-weight: 600;
+    }
+    .flow-arrow { font-size: 1.3rem; color: var(--gray); }
+
+    code {
+      background: #eef1f5;
+      padding: .1rem .4rem;
+      border-radius: 4px;
+      font-size: .88rem;
+      font-family: 'Courier New', monospace;
+    }
+    pre {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 1rem 1.2rem;
+      border-radius: var(--radius);
+      overflow-x: auto;
+      font-size: .85rem;
+      margin-top: .6rem;
+      line-height: 1.55;
+    }
+
+    .tip {
+      background: #eaf5ea;
+      border-left: 4px solid var(--green);
+      padding: .7rem 1rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: .88rem;
+      margin-top: .8rem;
+    }
+    .warn {
+      background: #fef9ec;
+      border-left: 4px solid var(--orange);
+      padding: .7rem 1rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: .88rem;
+      margin-top: .8rem;
+    }
+
+    ul { padding-left: 1.3rem; }
+    ul li { margin-bottom: .3rem; font-size: .92rem; }
+
+    .twoCol {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: .6rem;
+    }
+    @media (max-width: 600px) { .twoCol { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .9rem 1rem;
+    }
+    .card h4 { font-size: .9rem; margin-bottom: .4rem; color: var(--blue); }
+    .card p  { font-size: .85rem; color: #444; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ydata-profiling – Ergebnisse verstehen &amp; selbst entscheiden</h1>
+  <p>Praktische Anleitung: Was zeigt der Report? Was bedeutet es? Was tue ich jetzt?</p>
+</header>
+
+<nav>
+  <a href="#workflow">Workflow</a>
+  <a href="#overview">1 · Overview</a>
+  <a href="#variables">2 · Variables</a>
+  <a href="#missing">3 · Missing Values</a>
+  <a href="#duplicates">4 · Duplicates</a>
+  <a href="#samples">5 · Samples</a>
+  <a href="#correlations">6 · Correlations</a>
+  <a href="#decisions">Entscheidungen</a>
+  <a href="#checklist">Checkliste</a>
+  <a href="#commands">Befehle</a>
+</nav>
+
+<main>
+
+  <!-- ── WORKFLOW ────────────────────────────────────────── -->
+  <section id="workflow">
+    <h2>Empfohlener Workflow mit ydata-profiling</h2>
+    <div class="flow">
+      <div class="flow-box">CSV laden</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">data_profiling.py ausführen</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">HTML-Report öffnen</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Overview lesen</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Variables prüfen</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Missing / Duplicates</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box">Entscheidung treffen</div>
+    </div>
+    <div class="tip">
+      <strong>Grundregel:</strong> Zuerst <em>verstehen</em>, dann <em>entscheiden</em>, dann erst <em>cleanen</em>.
+      ydata-profiling zeigt nur Fakten – du entscheidest, was ein Problem ist.
+    </div>
+  </section>
+
+  <!-- ── OVERVIEW ───────────────────────────────────────── -->
+  <section id="overview">
+    <h2>1 · Overview – Der erste Blick</h2>
+    <p>Die <strong>Overview</strong>-Sektion erscheint ganz oben im Report. Sie gibt dir in wenigen Sekunden ein Gesamtbild.</p>
+
+    <table>
+      <thead>
+        <tr><th>Kennzahl</th><th>Was sie bedeutet</th><th>Handlungsbedarf?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Number of variables</code></td>
+          <td>Anzahl der Spalten</td>
+          <td>Prüfe, ob alle erwarteten Spalten da sind.</td>
+        </tr>
+        <tr>
+          <td><code>Number of observations</code></td>
+          <td>Anzahl der Zeilen (inkl. Duplikate, Leerzeilen)</td>
+          <td>Stimmt sie mit der erwarteten Datenmenge überein?</td>
+        </tr>
+        <tr>
+          <td><code>Missing cells (%)</code></td>
+          <td>Anteil fehlender Werte über alle Zellen</td>
+          <td><span class="badge b-green">OK</span> &lt; 5 % &nbsp;
+              <span class="badge b-orange">Prüfen</span> 5–20 % &nbsp;
+              <span class="badge b-red">Kritisch</span> &gt; 20 %</td>
+        </tr>
+        <tr>
+          <td><code>Duplicate rows (%)</code></td>
+          <td>Zeilen, die exakt identisch sind</td>
+          <td><span class="badge b-green">OK</span> &lt; 1 % &nbsp;
+              <span class="badge b-red">Problem</span> &gt; 1 % → Quelle prüfen</td>
+        </tr>
+        <tr>
+          <td><code>Total size in memory</code></td>
+          <td>RAM-Verbrauch des DataFrames</td>
+          <td>Relevant bei großen Datasets (&gt; 500 MB).</td>
+        </tr>
+        <tr>
+          <td><code>Variable types</code></td>
+          <td>Numeric / Text / DateTime / Boolean / …</td>
+          <td>Sind die Typen korrekt erkannt? Numeric als Text → Datenqualitätsproblem.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warn">
+      <strong>Achtung:</strong> Wenn eine Zahl-Spalte als <em>Text</em> erkannt wird, liegt oft ein Problem in den Rohdaten vor
+      (z. B. Einheitenzeichen wie „€", repeated Header-Zeilen, Leerzeichen).
+    </div>
+  </section>
+
+  <!-- ── VARIABLES ──────────────────────────────────────── -->
+  <section id="variables">
+    <h2>2 · Variables – Jede Spalte im Detail</h2>
+    <p>Für jede Spalte liefert ydata-profiling eine eigene Analyse. Die wichtigsten Kennzahlen:</p>
+
+    <h3>Numerische Spalten</h3>
+    <table>
+      <thead>
+        <tr><th>Kennzahl</th><th>Bedeutung</th><th>Was prüfen?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Mean / Median</code></td>
+          <td>Durchschnitt / Mittelpunkt</td>
+          <td>Wenn Mean ≠ Median → schiefe Verteilung, evtl. Ausreißer.</td>
+        </tr>
+        <tr>
+          <td><code>Std</code></td>
+          <td>Standardabweichung</td>
+          <td>Sehr hohe Std relativ zum Mean → Ausreißer untersuchen.</td>
+        </tr>
+        <tr>
+          <td><code>Min / Max</code></td>
+          <td>Kleinstes / größtes Vorkommen</td>
+          <td>Min &lt; 0 bei Preisen? Max extrem hoch? → Domain-Wissen anwenden.</td>
+        </tr>
+        <tr>
+          <td><code>Zeros (%)</code></td>
+          <td>Anteil Nullwerte</td>
+          <td>0 kann legitim sein (keine Bestellung) oder ein fehlender Wert sein.</td>
+        </tr>
+        <tr>
+          <td><code>Histogram</code></td>
+          <td>Verteilung der Werte</td>
+          <td>Normalverteilt? Bimodal? Sehr schief? → beeinflusst spätere Modelle.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Text-/Kategoriale Spalten</h3>
+    <table>
+      <thead>
+        <tr><th>Kennzahl</th><th>Bedeutung</th><th>Was prüfen?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Distinct (%)</code></td>
+          <td>Anteil einzigartiger Werte</td>
+          <td>100 % → ID-Spalte oder freier Text. 1–2 % → gute Kategorie.</td>
+        </tr>
+        <tr>
+          <td><code>Most common values</code></td>
+          <td>Top-N häufigste Einträge</td>
+          <td>Sind Schreibvarianten dabei? (z. B. „New York" vs „new york" vs „NY")</td>
+        </tr>
+        <tr>
+          <td><code>Length distribution</code></td>
+          <td>Länge der Strings</td>
+          <td>Kurze Ausreißer → abgeschnittene Werte? Sehr lange → Freitext?</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>DateTime-Spalten</h3>
+    <table>
+      <thead>
+        <tr><th>Kennzahl</th><th>Bedeutung</th><th>Was prüfen?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>Range</code></td>
+          <td>Zeitraum von Datum A bis Datum B</td>
+          <td>Stimmt der Zeitraum mit dem Datenkontext überein?</td>
+        </tr>
+        <tr>
+          <td><code>Gaps</code></td>
+          <td>Fehlende Zeitperioden</td>
+          <td>Datenlücken könnten Ausfälle, Feiertage oder Erfassungsfehler sein.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tip">
+      <strong>Trick:</strong> Klicke auf „Toggle details" bei jeder Variable im Report –
+      dort siehst du Histogramme, Häufigkeitsverteilungen und Extremwerte.
+    </div>
+  </section>
+
+  <!-- ── MISSING VALUES ─────────────────────────────────── -->
+  <section id="missing">
+    <h2>3 · Missing Values – Fehlende Werte verstehen</h2>
+    <p>ydata-profiling visualisiert fehlende Werte als Heatmap und Matrix. Das hilft dir zu erkennen, ob Lücken zufällig oder systematisch sind.</p>
+
+    <div class="twoCol">
+      <div class="card">
+        <h4>Zufällig fehlend (MCAR)</h4>
+        <p>Kein Muster erkennbar. Einzelne Zellen fehlen sporadisch.<br>→ Imputation oder Zeile entfernen.</p>
+      </div>
+      <div class="card">
+        <h4>Systematisch fehlend (MAR / MNAR)</h4>
+        <p>Fehlende Werte häufen sich in bestimmten Gruppen oder Zeiträumen.<br>→ Ursache in der Datenquelle suchen.</p>
+      </div>
+    </div>
+
+    <h3>Schwellenwerte als Orientierung</h3>
+    <table>
+      <thead>
+        <tr><th>Fehlend in Spalte</th><th>Empfehlung</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>&lt; 5 %</strong></td><td>Imputation (Median/Mean/Modus) oder einfach entfernen – selten kritisch.</td></tr>
+        <tr><td><strong>5 – 20 %</strong></td><td>Art des Fehlens verstehen. Imputation oder Modell-basiert.</td></tr>
+        <tr><td><strong>20 – 50 %</strong></td><td>Spalte nur vorsichtig verwenden. Quelle hinterfragen.</td></tr>
+        <tr><td><strong>&gt; 50 %</strong></td><td>Spalte für Analyse meist unbrauchbar – dokumentieren, evtl. droppen.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn">
+      <strong>Wichtig:</strong> Fehlende Werte in ydata-profiling = echte <code>NaN</code>.
+      Wenn du leere Strings <code>""</code> hast, zeigt der Report sie <em>nicht</em> als Missing – das musst du selbst im Code prüfen.
+    </div>
+  </section>
+
+  <!-- ── DUPLICATES ─────────────────────────────────────── -->
+  <section id="duplicates">
+    <h2>4 · Duplicates – Doppelte Zeilen</h2>
+    <p>Der Report zeigt die Anzahl der exakt doppelten Zeilen (alle Spalten identisch) und listet die häufigsten Duplikate auf.</p>
+
+    <h3>Fragen, die du dir stellen musst:</h3>
+    <ul>
+      <li>Sind Duplikate <strong>legitim</strong>? (z. B. gleicher Artikel mehrfach bestellt – dann kein Fehler)</li>
+      <li>Kommen sie aus einem <strong>Ladefehler</strong>? (Datei zweimal eingelesen, ETL-Fehler)</li>
+      <li>Haben die Zeilen eine <strong>ID-Spalte</strong>? Dann lieber nach ID-Duplikaten suchen, nicht nach Zeilen-Duplikaten.</li>
+    </ul>
+
+    <div class="decision-box">
+      <p><strong>Entscheidungsbaum:</strong><br>
+      Duplikate gefunden → <em>Sind die Zeilen wirklich identisch (inkl. Zeitstempel)?</em><br>
+      Ja → Ladefehler wahrscheinlich → entfernen mit <code>df.drop_duplicates()</code><br>
+      Nein → Domain-Wissen nötig, erst verstehen warum</p>
+    </div>
+  </section>
+
+  <!-- ── SAMPLES ─────────────────────────────────────────── -->
+  <section id="samples">
+    <h2>5 · Samples – Konkrete Zeilen ansehen</h2>
+    <p>ydata-profiling zeigt dir standardmäßig die ersten und letzten 10 Zeilen deines Datensatzes.</p>
+    <ul>
+      <li>Siehst du <strong>Kopfzeilen mitten im Datensatz</strong>? (Spaltenname als Datenwert) → Mehrere CSVs wurden falsch zusammengeführt.</li>
+      <li>Siehst du <strong>komplett leere Zeilen</strong>? → Blank rows aus dem Export.</li>
+      <li>Stimmen die Werte mit dem, was du erwartest? (Datum-Format, Dezimaltrennzeichen, Encoding)</li>
+    </ul>
+    <div class="tip">
+      Samples sind der „Augen-Check" – sie bestätigen oder widerlegen, was die Statistiken sagen.
+    </div>
+  </section>
+
+  <!-- ── CORRELATIONS ───────────────────────────────────── -->
+  <section id="correlations">
+    <h2>6 · Correlations – Zusammenhänge zwischen Spalten</h2>
+    <p>Nur relevant wenn du numerische Spalten hast. ydata-profiling berechnet Pearson, Spearman, Kendall und Cramér's V (für Kategorien).</p>
+    <table>
+      <thead>
+        <tr><th>Methode</th><th>Für welchen Datentyp</th><th>Was bedeutet 1 / -1 / 0?</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pearson</strong></td>
+          <td>Numerisch (lineare Beziehung)</td>
+          <td>1 = perfekt positiv, -1 = perfekt negativ, 0 = kein Zusammenhang</td>
+        </tr>
+        <tr>
+          <td><strong>Spearman</strong></td>
+          <td>Numerisch (auch nicht-linear, rangbasiert)</td>
+          <td>Robuster gegenüber Ausreißern als Pearson</td>
+        </tr>
+        <tr>
+          <td><strong>Cramér's V</strong></td>
+          <td>Kategoriale Spalten</td>
+          <td>0 = unabhängig, 1 = perfekte Assoziation</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="warn">
+      <strong>Korrelation ≠ Kausalität.</strong> Hohe Korrelation zwischen zwei Spalten kann bedeuten: beide messen das Gleiche (Redundanz) oder sie hängen mathematisch zusammen (Feature Leakage). Prüfe das vor dem Modellieren.
+    </div>
+  </section>
+
+  <!-- ── ENTSCHEIDUNGEN ─────────────────────────────────── -->
+  <section id="decisions">
+    <h2>Entscheidungen nach dem Report</h2>
+    <p>Nach dem Lesen des Reports stellst du dir diese 6 Kernfragen:</p>
+
+    <ol class="step-list">
+      <li>
+        <strong>Stimmt die Zeilenanzahl?</strong><br>
+        Vergleiche: erwartete Datenmenge vs. <code>Number of observations</code>.
+        Viel mehr als erwartet → Duplikate oder Ladefehler. Viel weniger → Filterfehler oder leere Zeilen verschluckt.
+      </li>
+      <li>
+        <strong>Sind die Spaltentypen korrekt?</strong><br>
+        Zahlen-Spalten als Text → Datenqualitätsproblem (Sonderzeichen, mixed types, Header-Zeilen im Daten).
+        Datum als Text → Parsing-Problem.
+      </li>
+      <li>
+        <strong>Wie viele fehlende Werte gibt es?</strong><br>
+        Für jede Spalte: Ist das tolerable (&lt; 5 %)? Ist es systematisch? Muss ich imputieren oder droppen?
+      </li>
+      <li>
+        <strong>Gibt es Duplikate – und sind sie ein Problem?</strong><br>
+        Duplikate prüfen: Ladefehler oder echte Mehrfacheinträge? Entscheidung: droppen oder behalten.
+      </li>
+      <li>
+        <strong>Gibt es Ausreißer, die ich untersuchen muss?</strong><br>
+        Min/Max-Werte plausibel? Histogramm zeigt extreme Spikes? → Rohdaten nachschauen.
+      </li>
+      <li>
+        <strong>Gibt es hoch korrelierte Spalten (Redundanz)?</strong><br>
+        Correlation &gt; 0.95 → prüfen ob eine Spalte für Modellierung entfernt werden sollte.
+      </li>
+    </ol>
+  </section>
+
+  <!-- ── CHECKLISTE ─────────────────────────────────────── -->
+  <section id="checklist">
+    <h2>Checkliste – Nach dem Report</h2>
+    <table>
+      <thead>
+        <tr><th>Was prüfen?</th><th>Wo im Report?</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Erwartete Zeilenanzahl stimmt</td><td>Overview → Number of observations</td><td>☐</td></tr>
+        <tr><td>Alle erwarteten Spalten vorhanden</td><td>Overview → Number of variables</td><td>☐</td></tr>
+        <tr><td>Spaltentypen korrekt erkannt</td><td>Overview → Variable types</td><td>☐</td></tr>
+        <tr><td>Fehlende Werte &lt; Schwellenwert</td><td>Missing Values</td><td>☐</td></tr>
+        <tr><td>Duplikate geprüft und entschieden</td><td>Duplicates</td><td>☐</td></tr>
+        <tr><td>Min/Max jeder Spalte plausibel</td><td>Variables → Details</td><td>☐</td></tr>
+        <tr><td>Keine Kopfzeilen in den Daten</td><td>Samples → First rows</td><td>☐</td></tr>
+        <tr><td>Keine leeren Zeilen sichtbar</td><td>Samples</td><td>☐</td></tr>
+        <tr><td>Ausreißer untersucht</td><td>Variables → Histogram / Min/Max</td><td>☐</td></tr>
+        <tr><td>Hohe Korrelationen beachtet</td><td>Correlations</td><td>☐</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── BEFEHLE ──────────────────────────────────────────── -->
+  <section id="commands">
+    <h2>Befehle – Schnellreferenz</h2>
+    <h3>Report erstellen</h3>
+    <pre>
+# Mit aktivierter .venv
+source .venv/bin/activate
+python data_profiling.py                          # my_data.csv → my_data_profile.html
+python data_profiling.py andere_datei.csv         # andere CSV
+python data_profiling.py daten.csv --output r.html  # eigener Name</pre>
+
+    <h3>Schnelle Diagnose in Python (nach dem Report)</h3>
+    <pre>
+import pandas as pd
+
+df = pd.read_csv("my_data.csv")
+
+# 1. Überblick
+print(df.shape)           # (Zeilen, Spalten)
+print(df.dtypes)          # Spaltentypen
+print(df.isnull().sum())  # Fehlende Werte pro Spalte
+
+# 2. Duplikate
+print(df.duplicated().sum())
+
+# 3. Ausreißer (numerische Spalten)
+print(df.describe())</pre>
+
+    <h3>Wenn Zahlen-Spalten als Text erkannt wurden</h3>
+    <pre>
+# Prüfe ob Kopfzeilen in den Daten stecken
+mask_header = df.iloc[:, 0] == df.columns[0]
+print(df[mask_header].shape)   # Anzahl Kopfzeilen-Duplikate
+
+# Prüfe komplett leere Zeilen
+print(df[df.isnull().all(axis=1)].shape)</pre>
+
+    <div class="tip">
+      <strong>Nächster Schritt nach der Diagnose:</strong> Erst wenn du weißt <em>was</em> falsch ist, fängst du an, die Daten zu cleanen. Nie umgekehrt.
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
